@@ -154,8 +154,8 @@ async function sendWelcomeEmail({ email, tier, uploadToken, userId }) {
       from: 'Narrative Sparring <sparring@narrativesparring.com>',
       to: email,
       subject: tier === 'solo_live'
-        ? 'Let's spar. Upload your materials + book your call.'
-        : 'Let's spar. Upload your materials.',
+        ? "Let's spar. Upload your materials + book your call."
+        : "Let's spar. Upload your materials.",
       html: getWelcomeEmailHTML({ tier, uploadUrl }),
     }),
   });
