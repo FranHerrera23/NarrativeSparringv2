@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/**/*.mjs": {
+    "api/**/*.js": {
       "runtime": "@vercel/node@3.2.17"
     }
   }
