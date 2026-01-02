@@ -40,7 +40,7 @@ async function sendReportEmail(params) {
   try {
     // Send email via Resend
     const response = await resend.emails.send({
-      from: 'CRUDA <reports@cruda.io>',
+      from: 'Narrative Sparring <fran@thecruda.com>',
       to: email,
       subject: 'Your Narrative Sparring Report is Ready',
       html: generateEmailHTML(name, reportUrl, tier),
@@ -186,7 +186,7 @@ async function sendErrorEmail(params) {
 
   try {
     const response = await resend.emails.send({
-      from: 'CRUDA <support@cruda.io>',
+      from: 'Narrative Sparring <fran@thecruda.com>',
       to: email,
       subject: 'Issue with Your Narrative Sparring Report',
       html: generateErrorEmailHTML(name, errorMessage),
