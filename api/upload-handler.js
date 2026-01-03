@@ -132,6 +132,14 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    // Trigger analysis asynchronously (don't wait for it)
+    const analysisUrl = `${process.env.VERCEL_URL || 'https://narrative-sparringv2.vercel.app'}/api/analyze`;
+    fetch(analysisUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    }).catch(err => console.error('Failed to trigger analysis:', err));
+
     // Return success response
     return res.status(200).json({
       success: true,
