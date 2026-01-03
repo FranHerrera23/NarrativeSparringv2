@@ -71,13 +71,11 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'No uploaded files found for this user' });
     }
 
-    // Step 3: Create analysis record (status: processing)
+    // Step 3: Create analysis record (minimal insert to discover actual schema)
     const { data: analysis, error: analysisCreateError } = await supabase
       .from('analyses')
       .insert({
         user_id: userId,
-        status: 'processing',
-        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -87,6 +85,8 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to create analysis record' });
     }
 
+    console.log('Analysis record created:', analysis);
+    console.log('Available columns:', Object.keys(analysis));
     analysisId = analysis.id;
 
     // Step 4: Download files from Supabase storage
@@ -184,7 +184,6 @@ module.exports = async function handler(req, res) {
     const { error: updateError } = await supabase
       .from('analyses')
       .update({
-        status: 'completed',
         report_url: reportUrl,
         tokens_used: claudeResult.tokensUsed.total,
         cost_usd: claudeResult.costUSD.total,
@@ -234,7 +233,6 @@ module.exports = async function handler(req, res) {
       await supabase
         .from('analyses')
         .update({
-          status: 'failed',
           error_message: error.message,
           completed_at: new Date().toISOString(),
         })
