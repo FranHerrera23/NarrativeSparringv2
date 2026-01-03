@@ -139,14 +139,18 @@ module.exports = async function handler(req, res) {
     const analysisUrl = `${baseUrl}/api/analyze`;
 
     try {
-      await fetch(analysisUrl, {
+      console.log('Triggering analysis at:', analysisUrl);
+      const response = await fetch(analysisUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
       });
+      console.log('Analysis response status:', response.status);
+      const responseText = await response.text();
+      console.log('Analysis response:', responseText);
       console.log('Analysis triggered for user:', userId);
     } catch (err) {
-      console.error('Failed to trigger analysis:', err);
+      console.error('Failed to trigger analysis:', err.message, err.stack);
     }
 
     // Return success response
