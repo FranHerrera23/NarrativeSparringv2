@@ -71,12 +71,11 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'No uploaded files found for this user' });
     }
 
-    // Step 3: Create analysis record with actual schema
+    // Step 3: Create analysis record (removing analysis_type - might have constraint)
     const { data: analysis, error: analysisCreateError } = await supabase
       .from('analyses')
       .insert({
         user_id: userId,
-        analysis_type: 'narrative_audit',
         analysis_content: { status: 'processing', started_at: new Date().toISOString() },
         sent_to_user: false,
       })
