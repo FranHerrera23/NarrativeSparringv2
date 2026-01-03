@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
     // Step 1: Fetch user from database
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, email, first_name, purchase_tier')
+      .select('id, email, purchase_tier')
       .eq('id', userId)
       .single();
 
@@ -202,7 +202,7 @@ module.exports = async function handler(req, res) {
     console.log('Sending report email...');
     const emailResult = await sendReportEmail({
       email: user.email,
-      name: user.first_name || 'there',
+      name: 'there',
       reportUrl,
       tier: user.purchase_tier,
     });
@@ -246,14 +246,14 @@ module.exports = async function handler(req, res) {
       try {
         const { data: user } = await supabase
           .from('users')
-          .select('email, first_name')
+          .select('email')
           .eq('id', req.body.userId)
           .single();
 
         if (user) {
           await sendErrorEmail({
             email: user.email,
-            name: user.first_name || 'there',
+            name: 'there',
             errorMessage: error.message,
           });
         }
