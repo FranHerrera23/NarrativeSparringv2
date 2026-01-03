@@ -77,7 +77,7 @@ module.exports = async function handler(req, res) {
       .insert({
         user_id: userId,
         status: 'processing',
-        started_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
