@@ -71,11 +71,14 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'No uploaded files found for this user' });
     }
 
-    // Step 3: Create analysis record (minimal insert to discover actual schema)
+    // Step 3: Create analysis record with actual schema
     const { data: analysis, error: analysisCreateError } = await supabase
       .from('analyses')
       .insert({
         user_id: userId,
+        analysis_type: 'narrative_audit',
+        analysis_content: { status: 'processing', started_at: new Date().toISOString() },
+        sent_to_user: false,
       })
       .select()
       .single();
@@ -85,8 +88,6 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to create analysis record' });
     }
 
-    console.log('Analysis record created:', analysis);
-    console.log('Available columns:', Object.keys(analysis));
     analysisId = analysis.id;
 
     // Step 4: Download files from Supabase storage
@@ -184,11 +185,15 @@ module.exports = async function handler(req, res) {
     const { error: updateError } = await supabase
       .from('analyses')
       .update({
-        report_url: reportUrl,
-        tokens_used: claudeResult.tokensUsed.total,
-        cost_usd: claudeResult.costUSD.total,
-        completed_at: new Date().toISOString(),
-        processing_time_seconds: processingTime,
+        analysis_content: {
+          status: 'completed',
+          report_url: reportUrl,
+          tokens_used: claudeResult.tokensUsed.total,
+          cost_usd: claudeResult.costUSD.total,
+          completed_at: new Date().toISOString(),
+          processing_time_seconds: processingTime,
+        },
+        sent_to_user: true,
       })
       .eq('id', analysisId);
 
@@ -233,8 +238,12 @@ module.exports = async function handler(req, res) {
       await supabase
         .from('analyses')
         .update({
-          error_message: error.message,
-          completed_at: new Date().toISOString(),
+          analysis_content: {
+            status: 'failed',
+            error_message: error.message,
+            failed_at: new Date().toISOString(),
+          },
+          sent_to_user: false,
         })
         .eq('id', analysisId);
     }
