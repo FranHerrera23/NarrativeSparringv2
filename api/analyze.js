@@ -76,7 +76,7 @@ module.exports = async function handler(req, res) {
       .from('analyses')
       .insert({
         user_id: userId,
-        processing_status: 'processing',
+        status: 'processing',
         started_at: new Date().toISOString(),
       })
       .select()
@@ -184,7 +184,7 @@ module.exports = async function handler(req, res) {
     const { error: updateError } = await supabase
       .from('analyses')
       .update({
-        processing_status: 'completed',
+        status: 'completed',
         report_url: reportUrl,
         tokens_used: claudeResult.tokensUsed.total,
         cost_usd: claudeResult.costUSD.total,
@@ -234,7 +234,7 @@ module.exports = async function handler(req, res) {
       await supabase
         .from('analyses')
         .update({
-          processing_status: 'failed',
+          status: 'failed',
           error_message: error.message,
           completed_at: new Date().toISOString(),
         })
