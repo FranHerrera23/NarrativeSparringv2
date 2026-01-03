@@ -133,10 +133,8 @@ module.exports = async function handler(req, res) {
     }
 
     // Trigger analysis (await to ensure it completes before function terminates)
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'https://narrative-sparringv2.vercel.app';
-    const analysisUrl = `${baseUrl}/api/analyze`;
+    // Always use production URL to avoid preview deployment protection
+    const analysisUrl = 'https://narrative-sparringv2.vercel.app/api/analyze';
 
     try {
       console.log('Triggering analysis at:', analysisUrl);
