@@ -133,7 +133,11 @@ module.exports = async function handler(req, res) {
     }
 
     // Trigger analysis asynchronously (don't wait for it)
-    const analysisUrl = `${process.env.VERCEL_URL || 'https://narrative-sparringv2.vercel.app'}/api/analyze`;
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'https://narrative-sparringv2.vercel.app';
+    const analysisUrl = `${baseUrl}/api/analyze`;
+
     fetch(analysisUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
