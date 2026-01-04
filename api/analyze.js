@@ -95,12 +95,14 @@ module.exports = async function handler(req, res) {
     const fileBuffers = [];
 
     for (const upload of uploads) {
+      console.log(`Downloading file: ${upload.filename} from path: ${upload.file_path}`);
       const { data: fileData, error: downloadError } = await supabase.storage
         .from(UPLOAD_BUCKET)
         .download(upload.file_path);
 
       if (downloadError) {
-        throw new Error(`Failed to download ${upload.filename}: ${downloadError.message}`);
+        console.error('Download error details:', JSON.stringify(downloadError, null, 2));
+        throw new Error(`Failed to download ${upload.filename}: ${downloadError.message || JSON.stringify(downloadError)}`);
       }
 
       // Convert blob to buffer
