@@ -28,6 +28,7 @@ async function sendReportEmail(params) {
     name = 'there',
     reportUrl,
     tier = 'basic',
+    userId,
   } = params;
 
   if (!email || !reportUrl) {
@@ -49,10 +50,10 @@ async function sendReportEmail(params) {
 
     // Log successful email send
     await logEmail({
-      email,
-      subject: 'Your Narrative Sparring Report is Ready',
+      user_id: userId,
+      email_type: 'report_delivery',
       status: 'sent',
-      message_id: response.id,
+      resend_message_id: response.id,
       sent_at: new Date().toISOString(),
     });
 
@@ -66,10 +67,10 @@ async function sendReportEmail(params) {
 
     // Log failed email attempt
     await logEmail({
-      email,
-      subject: 'Your Narrative Sparring Report is Ready',
+      user_id: userId,
+      email_type: 'report_delivery',
       status: 'failed',
-      error_message: error.message,
+      resend_message_id: null,
       sent_at: new Date().toISOString(),
     });
 
@@ -182,6 +183,7 @@ async function sendErrorEmail(params) {
     email,
     name = 'there',
     errorMessage,
+    userId,
   } = params;
 
   try {
@@ -194,10 +196,10 @@ async function sendErrorEmail(params) {
     });
 
     await logEmail({
-      email,
-      subject: 'Issue with Your Narrative Sparring Report',
+      user_id: userId,
+      email_type: 'error_notification',
       status: 'sent',
-      message_id: response.id,
+      resend_message_id: response.id,
       sent_at: new Date().toISOString(),
     });
 
