@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Upload Token</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #FF0033; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
+        .result {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+            word-break: break-all;
+        }
+        .url {
+            color: #0066cc;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        button {
+            background: #FF0033;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover { background: #cc0029; }
+        .success { color: #00aa00; font-weight: 600; margin-top: 10px; }
+        .info { background: #e3f2fd; padding: 15px; border-radius: 4px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Upload Token Generator</h1>
+        <p class="subtitle">Narrative Sparring - Manual Token Creation</p>
+
+        <div class="info">
+            <strong>User ID:</strong> 17b5ae73-d16a-40bc-8db3-8bc295b063df<br>
+            <strong>Valid for:</strong> 48 hours
+        </div>
+
+        <button onclick="generateToken()">Generate Upload URL</button>
+
+        <div id="result" style="display:none;">
+            <div class="result">
+                <strong>Your Upload URL:</strong><br>
+                <div class="url" id="uploadUrl"></div>
+            </div>
+            <button onclick="copyUrl()">📋 Copy URL</button>
+            <div id="copyStatus" class="success" style="display:none;">✅ Copied to clipboard!</div>
+        </div>
+    </div>
+
+    <script>
+        const userId = '17b5ae73-d16a-40bc-8db3-8bc295b063df';
+        const secret = '8f7d6c5b4a3928e1f0d9c8b7a6958473e2d1c0b9a8978665f4e3d2c1b0a99887766554433221100ffeeddccbbaa998877665544332211';
+
+        async function generateToken() {
+            // Create payload
+            const payload = {
+                userId: userId,
+                type: 'upload',
+                exp: Date.now() + (48 * 60 * 60 * 1000) // 48 hours
+            };
+
+            // Encode payload as base64
+            const payloadJson = JSON.stringify(payload);
+            const payloadBase64 = btoa(payloadJson);
+
+            // Generate HMAC signature
+            const encoder = new TextEncoder();
+            const keyData = encoder.encode(secret);
+            const messageData = encoder.encode(payloadJson);
+
+            const key = await crypto.subtle.importKey(
+                'raw',
+                keyData,
+                { name: 'HMAC', hash: 'SHA-256' },
+                false,
+                ['sign']
+            );
+
+            const signature = await crypto.subtle.sign('HMAC', key, messageData);
+            const signatureHex = Array.from(new Uint8Array(signature))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+
+            // Combine into token
+            const token = `${payloadBase64}.${signatureHex}`;
+            const uploadUrl = `https://narrative-sparring-cruda.lovable.app/upload?token=${token}`;
+
+            // Display result
+            document.getElementById('uploadUrl').textContent = uploadUrl;
+            document.getElementById('result').style.display = 'block';
+            window.generatedUrl = uploadUrl;
+        }
+
+        function copyUrl() {
+            navigator.clipboard.writeText(window.generatedUrl).then(() => {
+                document.getElementById('copyStatus').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('copyStatus').style.display = 'none';
+                }, 3000);
+            });
+        }
+    </script>
+</body>
+</html>
