@@ -211,6 +211,7 @@ module.exports = async function handler(req, res) {
       name: 'there',
       reportUrl,
       tier: user.purchase_tier,
+      userId: user.id,
     });
 
     if (!emailResult.success) {
@@ -264,6 +265,7 @@ module.exports = async function handler(req, res) {
             email: user.email,
             name: 'there',
             errorMessage: error.message,
+            userId: req.body.userId,
           });
         }
       } catch (emailError) {
