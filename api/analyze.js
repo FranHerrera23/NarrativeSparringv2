@@ -96,17 +96,25 @@ module.exports = async function handler(req, res) {
 
     for (const upload of uploads) {
       console.log(`Downloading file: ${upload.filename} from path: ${upload.file_path}`);
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from(UPLOAD_BUCKET)
-        .download(upload.file_path);
 
-      if (downloadError) {
-        console.error('Download error details:', JSON.stringify(downloadError, null, 2));
-        throw new Error(`Failed to download ${upload.filename}: ${downloadError.message || JSON.stringify(downloadError)}`);
+      // Use public URL since bucket is public (more reliable than download API)
+      const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${UPLOAD_BUCKET}/${upload.file_path}`;
+      console.log(`Fetching from public URL: ${publicUrl}`);
+
+      const response = await fetch(publicUrl);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Download error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`Failed to download ${upload.filename}: HTTP ${response.status} - ${response.statusText}`);
       }
 
-      // Convert blob to buffer
-      const arrayBuffer = await fileData.arrayBuffer();
+      // Convert response to buffer
+      const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
       fileBuffers.push({
