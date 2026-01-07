@@ -103,7 +103,7 @@
 
             // Combine into token
             const token = `${payloadBase64}.${signatureHex}`;
-            const uploadUrl = `https://narrative-sparring-cruda.lovable.app/upload?token=${token}`;
+            const uploadUrl = `https://narrative-sparringv2.vercel.app/api/upload-handler?token=${token}`;
 
             // Display result
             document.getElementById('uploadUrl').textContent = uploadUrl;
