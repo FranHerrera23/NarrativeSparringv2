@@ -406,7 +406,7 @@ Begin your analysis now.`;
  */
 async function generateNarrativeReport(extractedText, options = {}) {
   const {
-    model = process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022',
+    model = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929',
     maxTokens = 16000,
     temperature = 1.0,
   } = options;
