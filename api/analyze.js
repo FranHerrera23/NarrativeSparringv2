@@ -16,7 +16,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { extractTextFromFiles } = require('./utils/file-extractor');
 const { generateNarrativeReport } = require('./utils/claude-client');
-const { generatePDF, generateHTML } = require('./utils/report-generator');
+const { generateHTML } = require('./utils/report-generator');
 const { sendReportEmail, sendErrorEmail } = require('./utils/report-emailer');
 
 const supabase = createClient(
@@ -146,28 +146,14 @@ module.exports = async function handler(req, res) {
 
     console.log(`Claude analysis complete. Tokens used: ${claudeResult.tokensUsed.total}, Cost: $${claudeResult.costUSD.total.toFixed(4)}`);
 
-    // Step 7: Generate PDF from markdown report
-    console.log('Generating PDF report...');
-    let reportBuffer;
-    let reportFilename;
-    let reportContentType;
-
-    try {
-      reportBuffer = await generatePDF(claudeResult.report, {
-        title: 'Narrative Sparring Diagnostic Report',
-      });
-      reportFilename = `report-${userId}-${Date.now()}.pdf`;
-      reportContentType = 'application/pdf';
-    } catch (pdfError) {
-      // Fallback to HTML if PDF generation fails
-      console.warn('PDF generation failed, falling back to HTML:', pdfError);
-      const htmlReport = generateHTML(claudeResult.report, {
-        title: 'Narrative Sparring Diagnostic Report',
-      });
-      reportBuffer = Buffer.from(htmlReport, 'utf-8');
-      reportFilename = `report-${userId}-${Date.now()}.html`;
-      reportContentType = 'text/html';
-    }
+    // Step 7: Generate HTML report (skip PDF due to serverless compatibility issues)
+    console.log('Generating HTML report...');
+    const htmlReport = generateHTML(claudeResult.report, {
+      title: 'Narrative Sparring Diagnostic Report',
+    });
+    const reportBuffer = Buffer.from(htmlReport, 'utf-8');
+    const reportFilename = `report-${userId}-${Date.now()}.html`;
+    const reportContentType = 'text/html';
 
     // Step 8: Upload report to Supabase storage
     console.log('Uploading report to storage...');
