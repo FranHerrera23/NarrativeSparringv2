@@ -59,7 +59,7 @@ module.exports = async function handler(req, res) {
       success: true,
       userId: user.id,
       email: user.email,
-      tier: user.purchase_tier,
+      purchaseType: user.purchase_tier, // Frontend expects 'purchaseType'
     });
 
   } catch (error) {
