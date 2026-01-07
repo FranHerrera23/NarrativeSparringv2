@@ -55,11 +55,13 @@ module.exports = async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Step 2: Fetch uploaded files from database
+    // Step 2: Fetch uploaded files from database (only recent uploads from last 10 minutes)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const { data: uploads, error: uploadsError } = await supabase
       .from('uploads')
       .select('id, filename, file_path, file_size')
       .eq('user_id', userId)
+      .gte('uploaded_at', tenMinutesAgo)
       .order('uploaded_at', { ascending: true });
 
     if (uploadsError) {
