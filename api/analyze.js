@@ -16,7 +16,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { extractTextFromFiles } = require('./utils/file-extractor');
 const { generateNarrativeReport } = require('./utils/claude-client');
-const { generateHTML } = require('./utils/report-generator');
+const { generatePDFKit } = require('./utils/report-generator');
 const { sendReportEmail, sendErrorEmail } = require('./utils/report-emailer');
 
 const supabase = createClient(
@@ -146,14 +146,13 @@ module.exports = async function handler(req, res) {
 
     console.log(`Claude analysis complete. Tokens used: ${claudeResult.tokensUsed.total}, Cost: $${claudeResult.costUSD.total.toFixed(4)}`);
 
-    // Step 7: Generate HTML report (skip PDF due to serverless compatibility issues)
-    console.log('Generating HTML report...');
-    const htmlReport = generateHTML(claudeResult.report, {
+    // Step 7: Generate PDF report
+    console.log('Generating PDF report...');
+    const reportBuffer = await generatePDFKit(claudeResult.report, {
       title: 'Narrative Sparring Diagnostic Report',
     });
-    const reportBuffer = Buffer.from(htmlReport, 'utf-8');
-    const reportFilename = `report-${userId}-${Date.now()}.html`;
-    const reportContentType = 'text/html';
+    const reportFilename = `narrative-sparring-report-${Date.now()}.pdf`;
+    const reportContentType = 'application/pdf';
 
     // Step 8: Upload report to Supabase storage
     console.log('Uploading report to storage...');
@@ -162,7 +161,7 @@ module.exports = async function handler(req, res) {
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(REPORT_BUCKET)
       .upload(reportPath, reportBuffer, {
-        contentType: 'text/html; charset=utf-8',
+        contentType: reportContentType,
         upsert: false,
       });
 
