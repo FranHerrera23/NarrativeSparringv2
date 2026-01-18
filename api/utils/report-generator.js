@@ -209,10 +209,10 @@ function convertMarkdownToHTML(markdown) {
   html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
 
   // Bold
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*\*(.*?)\*\*/gms, '<strong>$1</strong>');
 
   // Italic
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
 
   // Links
   html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
@@ -223,6 +223,7 @@ function convertMarkdownToHTML(markdown) {
 
   // Clean up empty paragraphs
   html = html.replace(/<p><\/p>/g, '');
+  html = html.replace(/<p>\s*<\/p>/g, '');
 
   return html;
 }

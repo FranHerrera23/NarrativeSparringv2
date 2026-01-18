@@ -162,7 +162,7 @@ module.exports = async function handler(req, res) {
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(REPORT_BUCKET)
       .upload(reportPath, reportBuffer, {
-        contentType: reportContentType,
+        contentType: 'text/html; charset=utf-8',
         upsert: false,
       });
 
