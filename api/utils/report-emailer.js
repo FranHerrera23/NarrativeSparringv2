@@ -19,7 +19,7 @@ const supabase = createClient(
 
 /**
  * Send report delivery email
- * @param {Object} params - { email, name, reportUrl, tier }
+ * @param {Object} params - { email, name, reportUrl, tier, reportBuffer, reportFilename }
  * @returns {Object} - { success, messageId, error }
  */
 async function sendReportEmail(params) {
@@ -29,6 +29,8 @@ async function sendReportEmail(params) {
     reportUrl,
     tier = 'basic',
     userId,
+    reportBuffer,
+    reportFilename = 'narrative-sparring-report.html',
   } = params;
 
   if (!email || !reportUrl) {
@@ -39,14 +41,27 @@ async function sendReportEmail(params) {
   }
 
   try {
-    // Send email via Resend
-    const response = await resend.emails.send({
+    // Prepare email options
+    const emailOptions = {
       from: 'Narrative Sparring <fran@thecruda.com>',
       to: email,
       subject: 'Your Narrative Sparring Report is Ready',
       html: generateEmailHTML(name, reportUrl, tier),
       text: generateEmailText(name, reportUrl, tier),
-    });
+    };
+
+    // Add attachment if reportBuffer is provided
+    if (reportBuffer) {
+      emailOptions.attachments = [
+        {
+          filename: reportFilename,
+          content: reportBuffer,
+        },
+      ];
+    }
+
+    // Send email via Resend
+    const response = await resend.emails.send(emailOptions);
 
     // Log successful email send
     await logEmail({
@@ -104,8 +119,10 @@ function generateEmailHTML(name, reportUrl, tier) {
 
     <p style="font-size: 16px; margin-bottom: 20px;">Your narrative audit is complete.</p>
 
+    <p style="font-size: 16px; margin-bottom: 20px;"><strong>Your report is attached to this email</strong> and also available at the link below:</p>
+
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${reportUrl}" style="display: inline-block; background: #000; color: #fff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Download Your Report</a>
+      <a href="${reportUrl}" style="display: inline-block; background: #000; color: #fff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">View Report Online</a>
     </div>
 
     <p style="font-size: 16px; margin-bottom: 15px;">This 12-page diagnostic shows:</p>
@@ -139,7 +156,8 @@ function generateEmailText(name, reportUrl, tier) {
 
 Your narrative audit is complete.
 
-Download your report: ${reportUrl}
+Your report is attached to this email and also available online at:
+${reportUrl}
 
 This 12-page diagnostic shows:
 - Where your messaging breaks down

@@ -200,14 +200,16 @@ module.exports = async function handler(req, res) {
       // Don't fail the request - report is generated
     }
 
-    // Step 10: Send email with report link
-    console.log('Sending report email...');
+    // Step 10: Send email with report link AND attachment
+    console.log('Sending report email with attachment...');
     const emailResult = await sendReportEmail({
       email: user.email,
       name: 'there',
       reportUrl,
       tier: user.purchase_tier,
       userId: user.id,
+      reportBuffer,
+      reportFilename,
     });
 
     if (!emailResult.success) {
