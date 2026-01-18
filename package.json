@@ -8,11 +8,11 @@
     "@anthropic-ai/sdk": "^0.24.0",
     "@supabase/supabase-js": "^2.39.0",
     "busboy": "^1.6.0",
+    "jspdf": "^2.5.2",
     "mammoth": "^1.7.0",
     "markdown-pdf": "^11.0.0",
     "node-html-parser": "^6.1.0",
     "pdf-parse": "^1.1.1",
-    "pdfkit": "^0.15.0",
     "resend": "^3.1.0"
   }
 }

@@ -6,7 +6,7 @@
  */
 
 const markdownPdf = require('markdown-pdf');
-const PDFDocument = require('pdfkit');
+const { jsPDF } = require('jspdf');
 const { Readable } = require('stream');
 
 /**
@@ -230,7 +230,7 @@ function convertMarkdownToHTML(markdown) {
 }
 
 /**
- * Generate PDF using PDFKit (serverless-compatible)
+ * Generate PDF using jsPDF (serverless-compatible, pure JavaScript)
  * @param {string} markdown - The markdown content from Claude
  * @param {Object} options - Generation options
  * @returns {Promise<Buffer>} - PDF buffer
@@ -241,124 +241,127 @@ async function generatePDFKit(markdown, options = {}) {
     author = 'CRUDA',
   } = options;
 
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({
-        size: 'LETTER',
-        margins: { top: 50, bottom: 50, left: 50, right: 50 },
-        info: {
-          Title: title,
-          Author: author,
-        },
-      });
+  try {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: 'letter',
+    });
 
-      const chunks = [];
-      doc.on('data', (chunk) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', (error) => reject(error));
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 50;
+    const maxWidth = pageWidth - (margin * 2);
+    let yPos = margin;
 
-      // Add CRUDA branding header
-      doc
-        .fontSize(24)
-        .font('Helvetica-Bold')
-        .text('CRUDA', { align: 'center' });
+    // Helper to add page if needed
+    const checkPageBreak = (neededSpace = 20) => {
+      if (yPos + neededSpace > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin;
+      }
+    };
 
-      doc
-        .fontSize(14)
-        .font('Helvetica')
-        .text('Narrative Sparring', { align: 'center' });
+    // Add CRUDA branding header
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CRUDA', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 30;
 
-      doc.moveDown(0.5);
-      doc
-        .moveTo(50, doc.y)
-        .lineTo(562, doc.y)
-        .stroke();
-      doc.moveDown(1);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Narrative Sparring', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 20;
 
-      // Add title
-      doc
-        .fontSize(18)
-        .font('Helvetica-Bold')
-        .text(title, { align: 'center' });
+    // Draw line
+    doc.setLineWidth(2);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 30;
 
-      doc.moveDown(2);
+    // Add title
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 40;
 
-      // Parse and add markdown content
-      const lines = markdown.split('\n');
-      let currentFontSize = 11;
-      let currentFont = 'Helvetica';
+    // Parse and add markdown content
+    const lines = markdown.split('\n');
 
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i].trim();
 
-        // Skip empty lines
-        if (!line.trim()) {
-          doc.moveDown(0.5);
-          continue;
-        }
-
-        // Headers
-        if (line.startsWith('# ')) {
-          doc.fontSize(20).font('Helvetica-Bold').text(line.substring(2));
-          doc.moveDown(0.5);
-          continue;
-        }
-
-        if (line.startsWith('## ')) {
-          doc.fontSize(16).font('Helvetica-Bold').text(line.substring(3));
-          doc.moveDown(0.4);
-          continue;
-        }
-
-        if (line.startsWith('### ')) {
-          doc.fontSize(14).font('Helvetica-Bold').text(line.substring(4));
-          doc.moveDown(0.3);
-          continue;
-        }
-
-        // Bold text (simple approach - just detect ** markers)
-        if (line.includes('**')) {
-          line = line.replace(/\*\*/g, '');
-          doc.fontSize(11).font('Helvetica-Bold').text(line);
-          doc.moveDown(0.3);
-          continue;
-        }
-
-        // Regular text
-        doc.fontSize(11).font('Helvetica').text(line, {
-          align: 'left',
-          lineGap: 2,
-        });
-        doc.moveDown(0.2);
+      // Skip empty lines
+      if (!line) {
+        yPos += 10;
+        checkPageBreak();
+        continue;
       }
 
-      // Add footer
-      doc.moveDown(2);
-      doc
-        .moveTo(50, doc.y)
-        .lineTo(562, doc.y)
-        .stroke();
-      doc.moveDown(0.5);
+      // Headers
+      if (line.startsWith('# ')) {
+        checkPageBreak(30);
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        const text = line.substring(2);
+        const splitText = doc.splitTextToSize(text, maxWidth);
+        doc.text(splitText, margin, yPos);
+        yPos += splitText.length * 25;
+        continue;
+      }
 
-      doc
-        .fontSize(10)
-        .font('Helvetica')
-        .text('This report was generated by CRUDA\'s narrative diagnostic engine.', {
-          align: 'center',
-        });
+      if (line.startsWith('## ')) {
+        checkPageBreak(25);
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        const text = line.substring(3);
+        const splitText = doc.splitTextToSize(text, maxWidth);
+        doc.text(splitText, margin, yPos);
+        yPos += splitText.length * 20;
+        continue;
+      }
 
-      doc
-        .fontSize(10)
-        .text('Questions? Contact us at support@cruda.io', {
-          align: 'center',
-        });
+      if (line.startsWith('### ')) {
+        checkPageBreak(20);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        const text = line.substring(4);
+        const splitText = doc.splitTextToSize(text, maxWidth);
+        doc.text(splitText, margin, yPos);
+        yPos += splitText.length * 18;
+        continue;
+      }
 
-      doc.end();
+      // Bold text (simple detection)
+      const isBold = line.includes('**');
+      const cleanLine = line.replace(/\*\*/g, '');
 
-    } catch (error) {
-      reject(new Error(`PDF generation failed: ${error.message}`));
+      checkPageBreak(15);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+      const splitText = doc.splitTextToSize(cleanLine, maxWidth);
+      doc.text(splitText, margin, yPos);
+      yPos += splitText.length * 15;
     }
-  });
+
+    // Add footer on last page
+    yPos = pageHeight - margin - 30;
+    doc.setLineWidth(1);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 15;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('This report was generated by CRUDA\'s narrative diagnostic engine.', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 15;
+    doc.text('Questions? Contact us at support@cruda.io', pageWidth / 2, yPos, { align: 'center' });
+
+    // Convert to buffer
+    const pdfArrayBuffer = doc.output('arraybuffer');
+    return Buffer.from(pdfArrayBuffer);
+
+  } catch (error) {
+    throw new Error(`PDF generation failed: ${error.message}`);
+  }
 }
 
 module.exports = {

@@ -146,13 +146,30 @@ module.exports = async function handler(req, res) {
 
     console.log(`Claude analysis complete. Tokens used: ${claudeResult.tokensUsed.total}, Cost: $${claudeResult.costUSD.total.toFixed(4)}`);
 
-    // Step 7: Generate PDF report
+    // Step 7: Generate PDF report (with HTML fallback)
     console.log('Generating PDF report...');
-    const reportBuffer = await generatePDFKit(claudeResult.report, {
-      title: 'Narrative Sparring Diagnostic Report',
-    });
-    const reportFilename = `narrative-sparring-report-${Date.now()}.pdf`;
-    const reportContentType = 'application/pdf';
+    let reportBuffer;
+    let reportFilename;
+    let reportContentType;
+
+    try {
+      reportBuffer = await generatePDFKit(claudeResult.report, {
+        title: 'Narrative Sparring Diagnostic Report',
+      });
+      reportFilename = `narrative-sparring-report-${Date.now()}.pdf`;
+      reportContentType = 'application/pdf';
+      console.log('PDF generation successful');
+    } catch (pdfError) {
+      console.error('PDF generation failed, falling back to HTML:', pdfError);
+      // Fallback to HTML if PDF fails
+      const { generateHTML } = require('./utils/report-generator');
+      const htmlReport = generateHTML(claudeResult.report, {
+        title: 'Narrative Sparring Diagnostic Report',
+      });
+      reportBuffer = Buffer.from(htmlReport, 'utf-8');
+      reportFilename = `narrative-sparring-report-${Date.now()}.html`;
+      reportContentType = 'text/html; charset=utf-8';
+    }
 
     // Step 8: Upload report to Supabase storage
     console.log('Uploading report to storage...');
