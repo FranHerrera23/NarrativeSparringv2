@@ -12,13 +12,24 @@ const supabase = createClient(
 );
 
 module.exports = async function handler(req, res) {
-  // Only accept POST requests
-  if (req.method !== 'POST') {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle OPTIONS preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // Accept both GET and POST
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { token } = req.body;
+    // Get token from body (POST) or query (GET)
+    const token = req.body?.token || req.query?.token;
 
     if (!token) {
       return res.status(400).json({ error: 'Missing token' });
@@ -48,7 +59,7 @@ module.exports = async function handler(req, res) {
       success: true,
       userId: user.id,
       email: user.email,
-      tier: user.purchase_tier,
+      purchaseType: user.purchase_tier, // Frontend expects 'purchaseType'
     });
 
   } catch (error) {

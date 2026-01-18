@@ -16,7 +16,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { extractTextFromFiles } = require('./utils/file-extractor');
 const { generateNarrativeReport } = require('./utils/claude-client');
-const { generatePDF, generateHTML } = require('./utils/report-generator');
+const { generateHTML } = require('./utils/report-generator');
 const { sendReportEmail, sendErrorEmail } = require('./utils/report-emailer');
 
 const supabase = createClient(
@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
     // Step 1: Fetch user from database
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, email, first_name, purchase_tier')
+      .select('id, email, purchase_tier')
       .eq('id', userId)
       .single();
 
@@ -55,11 +55,13 @@ module.exports = async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Step 2: Fetch uploaded files from database
+    // Step 2: Fetch uploaded files from database (only recent uploads from last 10 minutes)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const { data: uploads, error: uploadsError } = await supabase
       .from('uploads')
       .select('id, filename, file_path, file_size')
       .eq('user_id', userId)
+      .gte('uploaded_at', tenMinutesAgo)
       .order('uploaded_at', { ascending: true });
 
     if (uploadsError) {
@@ -71,13 +73,14 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'No uploaded files found for this user' });
     }
 
-    // Step 3: Create analysis record (status: processing)
+    // Step 3: Create analysis record with correct analysis_type
     const { data: analysis, error: analysisCreateError } = await supabase
       .from('analyses')
       .insert({
         user_id: userId,
-        processing_status: 'processing',
-        started_at: new Date().toISOString(),
+        analysis_type: 'full_report',
+        analysis_content: { status: 'processing', started_at: new Date().toISOString() },
+        sent_to_user: false,
       })
       .select()
       .single();
@@ -94,16 +97,26 @@ module.exports = async function handler(req, res) {
     const fileBuffers = [];
 
     for (const upload of uploads) {
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from(UPLOAD_BUCKET)
-        .download(upload.file_path);
+      console.log(`Downloading file: ${upload.filename} from path: ${upload.file_path}`);
 
-      if (downloadError) {
-        throw new Error(`Failed to download ${upload.filename}: ${downloadError.message}`);
+      // Use public URL since bucket is public (more reliable than download API)
+      const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${UPLOAD_BUCKET}/${upload.file_path}`;
+      console.log(`Fetching from public URL: ${publicUrl}`);
+
+      const response = await fetch(publicUrl);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Download error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`Failed to download ${upload.filename}: HTTP ${response.status} - ${response.statusText}`);
       }
 
-      // Convert blob to buffer
-      const arrayBuffer = await fileData.arrayBuffer();
+      // Convert response to buffer
+      const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
       fileBuffers.push({
@@ -133,28 +146,14 @@ module.exports = async function handler(req, res) {
 
     console.log(`Claude analysis complete. Tokens used: ${claudeResult.tokensUsed.total}, Cost: $${claudeResult.costUSD.total.toFixed(4)}`);
 
-    // Step 7: Generate PDF from markdown report
-    console.log('Generating PDF report...');
-    let reportBuffer;
-    let reportFilename;
-    let reportContentType;
-
-    try {
-      reportBuffer = await generatePDF(claudeResult.report, {
-        title: 'Narrative Sparring Diagnostic Report',
-      });
-      reportFilename = `report-${userId}-${Date.now()}.pdf`;
-      reportContentType = 'application/pdf';
-    } catch (pdfError) {
-      // Fallback to HTML if PDF generation fails
-      console.warn('PDF generation failed, falling back to HTML:', pdfError);
-      const htmlReport = generateHTML(claudeResult.report, {
-        title: 'Narrative Sparring Diagnostic Report',
-      });
-      reportBuffer = Buffer.from(htmlReport, 'utf-8');
-      reportFilename = `report-${userId}-${Date.now()}.html`;
-      reportContentType = 'text/html';
-    }
+    // Step 7: Generate HTML report (skip PDF due to serverless compatibility issues)
+    console.log('Generating HTML report...');
+    const htmlReport = generateHTML(claudeResult.report, {
+      title: 'Narrative Sparring Diagnostic Report',
+    });
+    const reportBuffer = Buffer.from(htmlReport, 'utf-8');
+    const reportFilename = `report-${userId}-${Date.now()}.html`;
+    const reportContentType = 'text/html';
 
     // Step 8: Upload report to Supabase storage
     console.log('Uploading report to storage...');
@@ -184,12 +183,15 @@ module.exports = async function handler(req, res) {
     const { error: updateError } = await supabase
       .from('analyses')
       .update({
-        processing_status: 'completed',
-        report_url: reportUrl,
-        tokens_used: claudeResult.tokensUsed.total,
-        cost_usd: claudeResult.costUSD.total,
-        completed_at: new Date().toISOString(),
-        processing_time_seconds: processingTime,
+        analysis_content: {
+          status: 'completed',
+          report_url: reportUrl,
+          tokens_used: claudeResult.tokensUsed.total,
+          cost_usd: claudeResult.costUSD.total,
+          completed_at: new Date().toISOString(),
+          processing_time_seconds: processingTime,
+        },
+        sent_to_user: true,
       })
       .eq('id', analysisId);
 
@@ -202,9 +204,10 @@ module.exports = async function handler(req, res) {
     console.log('Sending report email...');
     const emailResult = await sendReportEmail({
       email: user.email,
-      name: user.first_name || 'there',
+      name: 'there',
       reportUrl,
       tier: user.purchase_tier,
+      userId: user.id,
     });
 
     if (!emailResult.success) {
@@ -234,9 +237,12 @@ module.exports = async function handler(req, res) {
       await supabase
         .from('analyses')
         .update({
-          processing_status: 'failed',
-          error_message: error.message,
-          completed_at: new Date().toISOString(),
+          analysis_content: {
+            status: 'failed',
+            error_message: error.message,
+            failed_at: new Date().toISOString(),
+          },
+          sent_to_user: false,
         })
         .eq('id', analysisId);
     }
@@ -246,15 +252,16 @@ module.exports = async function handler(req, res) {
       try {
         const { data: user } = await supabase
           .from('users')
-          .select('email, first_name')
+          .select('email')
           .eq('id', req.body.userId)
           .single();
 
         if (user) {
           await sendErrorEmail({
             email: user.email,
-            name: user.first_name || 'there',
+            name: 'there',
             errorMessage: error.message,
+            userId: req.body.userId,
           });
         }
       } catch (emailError) {

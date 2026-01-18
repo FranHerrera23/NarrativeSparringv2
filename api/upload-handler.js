@@ -27,6 +27,16 @@ const MIN_FILES_REQUIRED = 3;
 const UPLOAD_BUCKET = 'uploads';
 
 module.exports = async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle OPTIONS preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -120,6 +130,25 @@ module.exports = async function handler(req, res) {
         filename: file.filename,
         size: file.size,
       });
+    }
+
+    // Trigger analysis (await to ensure it completes before function terminates)
+    // Always use production URL to avoid preview deployment protection
+    const analysisUrl = 'https://narrative-sparringv2.vercel.app/api/analyze';
+
+    try {
+      console.log('Triggering analysis at:', analysisUrl);
+      const response = await fetch(analysisUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      console.log('Analysis response status:', response.status);
+      const responseText = await response.text();
+      console.log('Analysis response:', responseText);
+      console.log('Analysis triggered for user:', userId);
+    } catch (err) {
+      console.error('Failed to trigger analysis:', err.message, err.stack);
     }
 
     // Return success response
