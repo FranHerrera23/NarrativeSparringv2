@@ -4,7 +4,7 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const multiparty = require('multiparty');
+const busboy = require('busboy');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -20,44 +20,52 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const form = new multiparty.Form();
+    const bb = busboy({ headers: req.headers });
+    const files = [];
+    const timestamp = Date.now();
 
-    form.parse(req, async (err, fields, files) => {
-      if (err) {
-        return res.status(400).json({ error: 'Failed to parse upload' });
-      }
+    bb.on('file', (fieldname, file, info) => {
+      const { filename, mimeType } = info;
+      const chunks = [];
 
-      const uploadedFiles = files.files || [];
-      if (uploadedFiles.length === 0) {
+      file.on('data', (data) => chunks.push(data));
+      file.on('end', () => {
+        files.push({
+          filename,
+          buffer: Buffer.concat(chunks),
+          mimetype: mimeType,
+          size: chunks.reduce((acc, chunk) => acc + chunk.length, 0),
+        });
+      });
+    });
+
+    bb.on('finish', async () => {
+      if (files.length === 0) {
         return res.status(400).json({ error: 'No files uploaded' });
       }
 
-      // Upload files
-      const timestamp = Date.now();
       const results = [];
 
-      for (const file of uploadedFiles) {
-        const filePath = `${TEST_USER_ID}/${timestamp}-${file.originalFilename}`;
-        const fs = require('fs');
-        const fileBuffer = fs.readFileSync(file.path);
+      for (const file of files) {
+        const filePath = `${TEST_USER_ID}/${timestamp}-${file.filename}`;
 
         const { error } = await supabase.storage
           .from(UPLOAD_BUCKET)
-          .upload(filePath, fileBuffer, {
-            contentType: file.headers['content-type'],
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
             upsert: false,
           });
 
         if (!error) {
           await supabase.from('uploads').insert({
             user_id: TEST_USER_ID,
-            filename: file.originalFilename,
+            filename: file.filename,
             file_path: filePath,
             file_size: file.size,
             uploaded_at: new Date().toISOString(),
           });
 
-          results.push({ filename: file.originalFilename, size: file.size });
+          results.push({ filename: file.filename, size: file.size });
         }
       }
 
@@ -74,6 +82,8 @@ module.exports = async function handler(req, res) {
         message: 'Analysis started - check your email in 3-5 minutes'
       });
     });
+
+    req.pipe(bb);
 
   } catch (error) {
     return res.status(500).json({ error: error.message });
