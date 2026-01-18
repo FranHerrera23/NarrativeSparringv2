@@ -12,6 +12,7 @@
     "markdown-pdf": "^11.0.0",
     "node-html-parser": "^6.1.0",
     "pdf-parse": "^1.1.1",
+    "pdfkit": "^0.15.0",
     "resend": "^3.1.0"
   }
 }

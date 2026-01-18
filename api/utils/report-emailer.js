@@ -30,7 +30,7 @@ async function sendReportEmail(params) {
     tier = 'basic',
     userId,
     reportBuffer,
-    reportFilename = 'narrative-sparring-report.html',
+    reportFilename = 'narrative-sparring-report.pdf',
   } = params;
 
   if (!email || !reportUrl) {
