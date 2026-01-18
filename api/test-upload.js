@@ -23,10 +23,13 @@ module.exports = async function handler(req, res) {
     const bb = busboy({ headers: req.headers });
     const files = [];
     const timestamp = Date.now();
+    let fileCount = 0;
+    let filesCompleted = 0;
 
     bb.on('file', (fieldname, file, info) => {
       const { filename, mimeType } = info;
       const chunks = [];
+      fileCount++;
 
       file.on('data', (data) => chunks.push(data));
       file.on('end', () => {
@@ -36,10 +39,15 @@ module.exports = async function handler(req, res) {
           mimetype: mimeType,
           size: chunks.reduce((acc, chunk) => acc + chunk.length, 0),
         });
+        filesCompleted++;
       });
     });
 
     bb.on('finish', async () => {
+      // Wait for all file streams to complete
+      while (filesCompleted < fileCount) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
       if (files.length === 0) {
         return res.status(400).json({ error: 'No files uploaded' });
       }
