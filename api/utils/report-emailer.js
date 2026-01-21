@@ -43,7 +43,7 @@ async function sendReportEmail(params) {
   try {
     // Prepare email options
     const emailOptions = {
-      from: 'Narrative Sparring <fran@thecruda.com>',
+      from: 'Narrative Sparring <onboarding@resend.dev>',
       to: email,
       subject: 'Your Narrative Sparring Report is Ready',
       html: generateEmailHTML(name, reportUrl, tier),
@@ -206,7 +206,7 @@ async function sendErrorEmail(params) {
 
   try {
     const response = await resend.emails.send({
-      from: 'Narrative Sparring <fran@thecruda.com>',
+      from: 'Narrative Sparring <onboarding@resend.dev>',
       to: email,
       subject: 'Issue with Your Narrative Sparring Report',
       html: generateErrorEmailHTML(name, errorMessage),

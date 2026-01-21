@@ -151,7 +151,7 @@ async function sendWelcomeEmail({ email, tier, uploadToken, userId }) {
       'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: 'Narrative Sparring <fran@thecruda.com>',
+      from: 'Narrative Sparring <onboarding@resend.dev>',
       to: email,
       subject: tier === 'solo_live'
         ? "Let's spar. Upload your materials + book your call."
@@ -185,7 +185,7 @@ async function sendCalendlyEmail({ email, userId }) {
       'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: 'Narrative Sparring <fran@thecruda.com>',
+      from: 'Narrative Sparring <onboarding@resend.dev>',
       to: email,
       subject: 'Book your 45-minute sparring session',
       html: getCalendlyEmailHTML({ calendlyUrl }),
