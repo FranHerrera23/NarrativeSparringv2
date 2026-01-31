@@ -122,12 +122,18 @@ module.exports = async function handler(req, res) {
 
         console.log(`Upload complete. ${results.length} files uploaded successfully`);
 
-        // Trigger analysis (don't await - fire and forget)
-        fetch('https://narrative-sparringv2.vercel.app/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: TEST_USER_ID }),
-        }).catch(err => console.error('Analysis trigger error:', err));
+        // Trigger analysis (await to ensure it gets sent)
+        try {
+          console.log('Triggering analysis for user:', TEST_USER_ID);
+          const analyzeResponse = await fetch('https://narrative-sparringv2.vercel.app/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: TEST_USER_ID }),
+          });
+          console.log('Analysis triggered, status:', analyzeResponse.status);
+        } catch (err) {
+          console.error('Analysis trigger error:', err);
+        }
 
         if (!responseAlreadySent) {
           responseAlreadySent = true;
