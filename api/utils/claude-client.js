@@ -407,9 +407,16 @@ Begin your analysis now.`;
 async function generateNarrativeReport(extractedText, options = {}) {
   const {
     model = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929',
-    maxTokens = 16000,
+    maxTokens = 4000,  // Reduced for 60s timeout (free tier)
     temperature = 1.0,
   } = options;
+
+  // Truncate input to 100KB max to fit in 60s timeout
+  const MAX_INPUT_CHARS = 100000;
+  if (extractedText.length > MAX_INPUT_CHARS) {
+    console.log(`Truncating input from ${extractedText.length} to ${MAX_INPUT_CHARS} chars`);
+    extractedText = extractedText.substring(0, MAX_INPUT_CHARS) + '\n\n[... content truncated to fit time limit ...]';
+  }
 
   // Initialize Anthropic client
   const client = new Anthropic({
