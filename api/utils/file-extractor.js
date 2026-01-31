@@ -88,6 +88,8 @@ async function extractTextFromFile(file) {
         return extractFromHTML(file.buffer);
 
       case '.txt':
+      case '.md':
+      case '.markdown':
         return extractFromTXT(file.buffer);
 
       default:
@@ -225,6 +227,8 @@ function getFileType(filename) {
     '.pptx': 'PPTX',
     '.html': 'HTML',
     '.txt': 'TXT',
+    '.md': 'Markdown',
+    '.markdown': 'Markdown',
   };
   return typeMap[ext] || 'Unknown';
 }
