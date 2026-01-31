@@ -123,8 +123,17 @@
     uploadBtn.addEventListener('click', async () => {
       if (selectedFiles.length === 0) return;
 
+      // Check total file size (Vercel limit is 4.5MB)
+      const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+      const totalMB = (totalSize / 1024 / 1024).toFixed(2);
+
+      if (totalSize > 4.5 * 1024 * 1024) {
+        showStatus('error', `❌ Total file size (${totalMB}MB) exceeds 4.5MB limit. Try uploading fewer or smaller files.`);
+        return;
+      }
+
       uploadBtn.disabled = true;
-      showStatus('loading', '⏳ Uploading files...');
+      showStatus('loading', `⏳ Uploading ${totalMB}MB...`);
 
       try {
         const formData = new FormData();
@@ -135,7 +144,17 @@
           body: formData
         });
 
-        const result = await response.json();
+        // Try to parse as JSON, but handle HTML error pages
+        let result;
+        const contentType = response.headers.get('content-type');
+
+        if (contentType && contentType.includes('application/json')) {
+          result = await response.json();
+        } else {
+          // Got HTML or other non-JSON response (likely an error page)
+          const text = await response.text();
+          throw new Error(`Server returned non-JSON response (status ${response.status}). This usually means the request was too large or timed out. Response: ${text.substring(0, 200)}`);
+        }
 
         if (!response.ok) {
           throw new Error(result.error || 'Upload failed');
