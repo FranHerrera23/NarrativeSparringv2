@@ -407,12 +407,12 @@ Begin your analysis now.`;
 async function generateNarrativeReport(extractedText, options = {}) {
   const {
     model = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929',
-    maxTokens = 4000,  // Reduced for 60s timeout (free tier)
+    maxTokens = 2000,  // Further reduced for 60s timeout (free tier)
     temperature = 1.0,
   } = options;
 
-  // Truncate input to 100KB max to fit in 60s timeout
-  const MAX_INPUT_CHARS = 100000;
+  // Truncate input to 50KB max to fit in 60s timeout
+  const MAX_INPUT_CHARS = 50000;
   if (extractedText.length > MAX_INPUT_CHARS) {
     console.log(`Truncating input from ${extractedText.length} to ${MAX_INPUT_CHARS} chars`);
     extractedText = extractedText.substring(0, MAX_INPUT_CHARS) + '\n\n[... content truncated to fit time limit ...]';
