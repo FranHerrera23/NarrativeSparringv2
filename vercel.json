@@ -2,15 +2,7 @@
   "functions": {
     "api/**/*.js": {
       "runtime": "@vercel/node@3.2.17",
-      "maxDuration": 300
-    },
-    "api/test-upload.js": {
-      "runtime": "@vercel/node@3.2.17",
-      "maxDuration": 300
-    },
-    "api/analyze.js": {
-      "runtime": "@vercel/node@3.2.17",
-      "maxDuration": 300
+      "maxDuration": 60
     }
   }
 }
