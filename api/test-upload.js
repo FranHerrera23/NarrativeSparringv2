@@ -122,17 +122,24 @@ module.exports = async function handler(req, res) {
 
         console.log(`Upload complete. ${results.length} files uploaded successfully`);
 
-        // Trigger analysis (fire-and-forget, but ensure request is initiated)
+        // Trigger analysis asynchronously but wait for request to be sent
         console.log('Triggering analysis for user:', TEST_USER_ID);
-        fetch('https://narrative-sparringv2.vercel.app/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: TEST_USER_ID }),
-        }).then(() => {
-          console.log('Analysis request sent');
-        }).catch(err => {
+        try {
+          // Start the request but don't wait for response
+          const analyzePromise = fetch('https://narrative-sparringv2.vercel.app/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: TEST_USER_ID }),
+          });
+
+          // Wait just for the request to be initiated (not the response)
+          await Promise.race([
+            analyzePromise.then(() => console.log('Analysis triggered')),
+            new Promise(resolve => setTimeout(() => { console.log('Analysis trigger timeout, continuing anyway'); resolve(); }, 2000))
+          ]);
+        } catch (err) {
           console.error('Analysis trigger error:', err);
-        });
+        }
 
         if (!responseAlreadySent) {
           responseAlreadySent = true;
